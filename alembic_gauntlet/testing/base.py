@@ -31,8 +31,8 @@ class MigrationTestBase(
     Optional class attributes:
         - ``migration_diff_ignore_tables: list[str]`` — table names to exclude from
           schema diff and naming checks (e.g. auto-generated partition tables).
-        - ``allowed_index_prefixes``, ``allowed_index_suffixes``, ``allowed_fk_suffixes``
-          — override naming convention rules.
+        - ``allowed_index_prefixes``, ``allowed_index_suffixes``, ``allowed_fk_prefixes``,
+          ``allowed_fk_suffixes`` — override naming convention rules.
 
     Example::
 

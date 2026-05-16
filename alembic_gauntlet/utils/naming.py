@@ -64,10 +64,12 @@ def validate_naming_results(
     allowed_index_prefixes: list[str],
     allowed_index_suffixes: list[str],
     allowed_fk_suffixes: list[str],
+    allowed_fk_prefixes: list[str],
 ) -> None:
     """Assert that every index and foreign key follows naming conventions.
 
     Index names must match at least one allowed prefix **or** one allowed suffix.
+    FK names must match at least one allowed prefix **or** one allowed suffix.
     An optional trailing digit is accepted on suffixes to accommodate PostgreSQL
     partition auto-naming (e.g. ``users_pkey1``).
 
@@ -76,10 +78,13 @@ def validate_naming_results(
         allowed_index_prefixes: Prefixes an index name may start with (e.g. ``["idx_", "uq_"]``).
         allowed_index_suffixes: Suffixes an index name may end with (e.g. ``["_pkey", "_idx"]``).
         allowed_fk_suffixes: Suffixes a foreign key name must end with (e.g. ``["_fkey"]``).
+        allowed_fk_prefixes: Prefixes a foreign key name may start with (e.g. ``["fk_"]``).
     """
+
     prefix_pats = [re.compile(f"^{re.escape(p)}.*") for p in allowed_index_prefixes]
     suffix_pats = [re.compile(f".*{re.escape(s)}\\d*$") for s in allowed_index_suffixes]
-    fk_pats = [re.compile(f".*{re.escape(s)}$") for s in allowed_fk_suffixes]
+    fk_prefix_pats = [re.compile(f"^{re.escape(p)}.*") for p in allowed_fk_prefixes]
+    fk_suffix_pats = [re.compile(f".*{re.escape(s)}$") for s in allowed_fk_suffixes]
 
     for table, data in results.items():
         for idx_name in data["indexes"]:
@@ -93,8 +98,8 @@ def validate_naming_results(
         for fk in data["fks"]:
             fk_name = fk.get("name")
             if fk_name:
-                valid = any(p.match(fk_name) for p in fk_pats)
+                valid = any(p.match(fk_name) for p in fk_prefix_pats) or any(p.match(fk_name) for p in fk_suffix_pats)
                 assert valid, (
                     f"Foreign key '{fk_name}' on table '{table}' does not follow naming conventions. "
-                    f"Allowed suffixes: {allowed_fk_suffixes}."
+                    f"Allowed prefixes: {allowed_fk_prefixes}, suffixes: {allowed_fk_suffixes}."
                 )
