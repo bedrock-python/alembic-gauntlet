@@ -176,12 +176,22 @@ This test:
 **Catches**:
 - Inconsistent index naming (`idx_` vs `_idx`)
 - Foreign keys without proper suffix (`_fkey`)
-- Unconventional primary key names
+- Unconventional constraint names
 
-Default conventions:
-- **Index prefixes**: `idx_`, `uq_`
-- **Index suffixes**: `_idx`, `_pkey`, `_key`
-- **FK suffixes**: `_fkey`
+**Default conventions**:
+
+| Object | Allowed prefixes | Allowed suffixes |
+|--------|-----------------|-----------------|
+| Index | `idx_`, `uq_` | `_idx`, `_pkey`, `_key` |
+| Foreign key | `fk_` | `_fkey` |
+| CHECK constraint | `chk_` | — |
+| UNIQUE constraint | `uq_` | — |
+| PRIMARY KEY | `pk_` | `_pkey` |
+
+If your `MetaData` carries a `naming_convention`, the rules are derived
+automatically — no class attributes needed. See
+[Configuration](configuration.md#auto-deriving-rules-from-metadatanaming_convention)
+for details.
 
 ## Using Testcontainers
 
@@ -246,5 +256,6 @@ def migration_db_url(self) -> str:
 ## Next steps
 
 - [Configuration](configuration.md) — customize test behavior
+- [Configuring env.py](env-py.md) — connect alembic-gauntlet to your migrations
 - [Advanced usage](advanced.md) — mixins, custom validations
 - [API reference](../reference/index.md) — complete API docs
