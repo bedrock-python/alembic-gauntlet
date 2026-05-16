@@ -1,19 +1,47 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release Please"]
+    types: [completed]
 
 permissions:
+  contents: read
   id-token: write   # Trusted Publisher (PyPI OIDC)
 
 jobs:
   publish:
     name: Build and publish to PyPI
+    # Only run when Release Please succeeded and actually created a release tag.
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'master')
     runs-on: ubuntu-latest
     environment: pypi
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
-      - run: uv build
-      - run: uv publish
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-tags: true
+
+      # Abort if no release tag points at this commit — Release Please ran
+      # but only updated the PR without creating a release.
+      - name: Check for release tag
+        id: tag_check
+        run: |
+          TAG=$(git tag --points-at HEAD | grep -E '^alembic-gauntlet-v' | head -1)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ -z "$TAG" ]; then
+            echo "No release tag on this commit — skipping publish."
+            exit 0
+          fi
+          echo "Publishing $TAG"
+
+      - if: steps.tag_check.outputs.tag != ''
+        uses: astral-sh/setup-uv@v7
+
+      - if: steps.tag_check.outputs.tag != ''
+        run: uv build
+
+      - if: steps.tag_check.outputs.tag != ''
+        run: uv publish
