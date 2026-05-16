@@ -143,6 +143,21 @@ class TestMyMigrations(MigrationTestBase):
 - `users_email_key` ✅
 - `users_email_index` ❌ (wrong suffix)
 
+### allowed_fk_prefixes
+
+**Purpose**: Allowed prefixes for foreign key names.
+
+```python
+class TestMyMigrations(MigrationTestBase):
+    allowed_fk_prefixes: ClassVar[list[str]] = ["fk_"]
+```
+
+**Default**: `["fk_"]`
+
+**Examples**:
+- `fk_profiles_user_id_users` ✅
+- `profiles_user_id_fkey` ❌ (no prefix match, checked against suffixes)
+
 ### allowed_fk_suffixes
 
 **Purpose**: Allowed suffixes for foreign key names.
@@ -158,6 +173,91 @@ class TestMyMigrations(MigrationTestBase):
 - `profiles_user_id_fkey` ✅
 - `profiles_user_id_fk` ✅ (if `"_fk"` is in the list)
 - `profiles_user_id_foreign` ❌
+
+### allowed_check_prefixes / allowed_check_suffixes
+
+**Purpose**: Allowed prefixes and suffixes for CHECK constraint names.
+
+```python
+class TestMyMigrations(MigrationTestBase):
+    allowed_check_prefixes: ClassVar[list[str]] = ["chk_"]
+    allowed_check_suffixes: ClassVar[list[str]] = ["_check"]
+```
+
+**Defaults**: prefixes `["chk_"]`, suffixes `[]`
+
+**Examples**:
+- `chk_orders_amount_positive` ✅
+- `orders_amount_check` ❌ (no suffix in defaults — add `"_check"` to enable)
+
+### allowed_uq_prefixes / allowed_uq_suffixes
+
+**Purpose**: Allowed prefixes and suffixes for UNIQUE constraint names.
+
+```python
+class TestMyMigrations(MigrationTestBase):
+    allowed_uq_prefixes: ClassVar[list[str]] = ["uq_"]
+    allowed_uq_suffixes: ClassVar[list[str]] = ["_key"]
+```
+
+**Defaults**: prefixes `["uq_"]`, suffixes `[]`
+
+**Examples**:
+- `uq_users_email` ✅
+- `users_email_key` ❌ (no suffix in defaults — add `"_key"` to enable)
+
+### allowed_pk_prefixes / allowed_pk_suffixes
+
+**Purpose**: Allowed prefixes and suffixes for PRIMARY KEY constraint names.
+
+```python
+class TestMyMigrations(MigrationTestBase):
+    allowed_pk_prefixes: ClassVar[list[str]] = ["pk_"]
+    allowed_pk_suffixes: ClassVar[list[str]] = ["_pkey"]
+```
+
+**Defaults**: prefixes `["pk_"]`, suffixes `["_pkey"]`
+
+**Examples**:
+- `pk_users` ✅
+- `users_pkey` ✅
+- `users_pk` ❌
+
+## Auto-deriving rules from MetaData.naming_convention
+
+If your SQLAlchemy `MetaData` already carries a `naming_convention`, you don't
+need to set any class attributes — `alembic-gauntlet` extracts the rules
+automatically.
+
+```python
+DB_NAMING_CONVENTION = {
+    "ix": "%(column_0_label)s_idx",
+    "uq": "%(table_name)s_%(column_0_name)s_key",
+    "ck": "%(table_name)s_%(constraint_name)s_check",
+    "fk": "%(table_name)s_%(column_0_name)s_fkey",
+    "pk": "%(table_name)s_pkey",
+}
+Base = declarative_base(metadata=MetaData(naming_convention=DB_NAMING_CONVENTION))
+
+
+class TestMyMigrations(MigrationTestBase):
+    @pytest.fixture
+    def orm_metadata(self) -> MetaData:
+        return Base.metadata  # naming rules derived automatically — no class attrs needed
+```
+
+### Resolution order (last wins)
+
+| Layer | Source | Notes |
+|-------|--------|-------|
+| 1 | Built-in defaults | Always present as a baseline |
+| 2 | `MetaData.naming_convention` | Overrides defaults when non-empty templates are found |
+| 3 | Explicit class attributes | Always wins — set only what you want to override |
+
+Layer 2 extracts the literal prefix (text before the first `%(`) and the literal
+suffix (text after the last `)s`) from each template. Fully dynamic templates
+like `"%(table_name)s_%(column_0_name)s"` produce no prefix or suffix and are
+silently ignored.
 
 ## Complete example
 
@@ -357,5 +457,6 @@ def setup_logging(self):
 
 ## Next steps
 
+- [Configuring env.py](env-py.md) — connect alembic-gauntlet to your migrations
 - [Advanced usage](advanced.md) — custom validations, mixins
 - [API reference](../reference/index.md) — complete API docs
