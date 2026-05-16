@@ -34,12 +34,31 @@ class MigrationTestBase(
         - ``allowed_index_prefixes``, ``allowed_index_suffixes``, ``allowed_fk_prefixes``,
           ``allowed_fk_suffixes``, ``allowed_check_prefixes``, ``allowed_check_suffixes``,
           ``allowed_uq_prefixes``, ``allowed_uq_suffixes``, ``allowed_pk_prefixes``,
-          ``allowed_pk_suffixes`` — override naming convention rules.
+          ``allowed_pk_suffixes`` — override naming convention rules. When not set,
+          rules are auto-derived from ``orm_metadata.naming_convention`` (if present),
+          falling back to built-in defaults.
 
-    Example::
+    Example — zero config when ``MetaData`` carries a ``naming_convention``::
+
+        DB_NAMING_CONVENTION = {
+            "ix": "%(column_0_label)s_idx",
+            "uq": "%(table_name)s_%(column_0_name)s_key",
+            "ck": "%(table_name)s_%(constraint_name)s_check",
+            "fk": "%(table_name)s_%(column_0_name)s_fkey",
+            "pk": "%(table_name)s_pkey",
+        }
+        Base = declarative_base(metadata=MetaData(naming_convention=DB_NAMING_CONVENTION))
+
+        class TestMyMigrations(MigrationTestBase):
+            @pytest.fixture
+            def orm_metadata(self) -> MetaData:
+                return Base.metadata  # naming rules derived automatically
+
+    Example — explicit override::
 
         class TestMyMigrations(MigrationTestBase):
             migration_diff_ignore_tables = ["events_partitioned_default"]
+            allowed_fk_prefixes = ["fk_"]
 
             @pytest.fixture
             def orm_metadata(self) -> MetaData:
