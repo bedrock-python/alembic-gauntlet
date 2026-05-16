@@ -26,24 +26,20 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
-      sha: ${{ steps.tag.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_sha }}
           fetch-tags: true
 
-      - name: Resolve tag and sha
+      - name: Resolve tag
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SHA=$(git rev-parse HEAD)
             echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-            echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           else
             TAG=$(git tag --points-at HEAD | grep -E '^alembic-gauntlet-v' | head -1)
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
             if [ -z "$TAG" ]; then
               echo "No release tag on this commit — skipping publish."
             else
@@ -60,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ needs.check.outputs.sha }}
+          ref: ${{ needs.check.outputs.tag }}
 
       - uses: astral-sh/setup-uv@v7
       - run: uv build
