@@ -17,6 +17,7 @@ class MigrationNamingMixin:
 
     allowed_index_prefixes: ClassVar[list[str]] = ["idx_", "uq_"]
     allowed_index_suffixes: ClassVar[list[str]] = ["_idx", "_pkey", "_key"]
+    allowed_fk_prefixes: ClassVar[list[str]] = ["fk_"]
     allowed_fk_suffixes: ClassVar[list[str]] = ["_fkey"]
 
     async def test_naming_conventions(
@@ -42,5 +43,6 @@ class MigrationNamingMixin:
             filtered,
             allowed_index_prefixes=self.allowed_index_prefixes,
             allowed_index_suffixes=self.allowed_index_suffixes,
+            allowed_fk_prefixes=self.allowed_fk_prefixes,
             allowed_fk_suffixes=self.allowed_fk_suffixes,
         )
