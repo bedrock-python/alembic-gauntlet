@@ -40,6 +40,7 @@ async def run_alembic_upgrade(
             command.upgrade(alembic_config, revision)
         finally:
             alembic_config.attributes.pop("connection", None)
+            alembic_config.attributes.pop("target_schema", None)
 
     async with engine.begin() as conn:
         await conn.run_sync(_upgrade)
@@ -68,6 +69,7 @@ async def run_alembic_downgrade(
             command.downgrade(alembic_config, revision)
         finally:
             alembic_config.attributes.pop("connection", None)
+            alembic_config.attributes.pop("target_schema", None)
 
     async with engine.begin() as conn:
         await conn.run_sync(_downgrade)
@@ -104,8 +106,7 @@ def get_all_revisions(alembic_config: Config) -> list[str]:
     """
     script = ScriptDirectory.from_config(alembic_config)
     # walk_revisions() yields head → base; reverse for base → head order.
-    revisions = [rev.revision for rev in script.walk_revisions() if rev.revision]
-    return list(reversed(revisions))
+    return list(reversed([rev.revision for rev in script.walk_revisions() if rev.revision]))
 
 
 async def create_isolated_migration_schema(
