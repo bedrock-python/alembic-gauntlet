@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sqlalchemy import MetaData
     from sqlalchemy.ext.asyncio import AsyncEngine
 
-_UNSET: list[str] = []
+_UNSET: object = object()
 
 
 class MigrationNamingMixin:
@@ -29,16 +29,16 @@ class MigrationNamingMixin:
     not inherited from ``MigrationNamingMixin`` itself.
     """
 
-    allowed_index_prefixes: ClassVar[list[str]] = _UNSET
-    allowed_index_suffixes: ClassVar[list[str]] = _UNSET
-    allowed_fk_prefixes: ClassVar[list[str]] = _UNSET
-    allowed_fk_suffixes: ClassVar[list[str]] = _UNSET
-    allowed_check_prefixes: ClassVar[list[str]] = _UNSET
-    allowed_check_suffixes: ClassVar[list[str]] = _UNSET
-    allowed_uq_prefixes: ClassVar[list[str]] = _UNSET
-    allowed_uq_suffixes: ClassVar[list[str]] = _UNSET
-    allowed_pk_prefixes: ClassVar[list[str]] = _UNSET
-    allowed_pk_suffixes: ClassVar[list[str]] = _UNSET
+    allowed_index_prefixes: ClassVar[object] = _UNSET
+    allowed_index_suffixes: ClassVar[object] = _UNSET
+    allowed_fk_prefixes: ClassVar[object] = _UNSET
+    allowed_fk_suffixes: ClassVar[object] = _UNSET
+    allowed_check_prefixes: ClassVar[object] = _UNSET
+    allowed_check_suffixes: ClassVar[object] = _UNSET
+    allowed_uq_prefixes: ClassVar[object] = _UNSET
+    allowed_uq_suffixes: ClassVar[object] = _UNSET
+    allowed_pk_prefixes: ClassVar[object] = _UNSET
+    allowed_pk_suffixes: ClassVar[object] = _UNSET
 
     _DEFAULTS: ClassVar[dict[str, list[str]]] = {
         "allowed_index_prefixes": ["idx_", "uq_"],
@@ -109,7 +109,7 @@ class MigrationNamingMixin:
         async with migration_engine.connect() as conn:
             results = await conn.run_sync(lambda sc: fetch_table_naming_results(sc, schema=isolated_migration_schema))
 
-        ignore_tables = set(getattr(self, "migration_diff_ignore_tables", []))
+        ignore_tables = frozenset(getattr(self, "migration_diff_ignore_tables", ()))
         filtered = {t: r for t, r in results.items() if t not in ignore_tables}
 
         rules = self._resolve_naming_rules(orm_metadata)
