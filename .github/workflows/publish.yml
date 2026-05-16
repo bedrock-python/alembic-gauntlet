@@ -4,6 +4,11 @@ on:
   workflow_run:
     workflows: ["Release Please"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. alembic-gauntlet-v0.2.0)"
+        required: true
 
 permissions:
   contents: read
@@ -12,22 +17,24 @@ permissions:
 jobs:
   publish:
     name: Build and publish to PyPI
-    # Only run when Release Please succeeded and actually created a release tag.
+    # For workflow_run: only run when Release Please succeeded and created a release tag.
+    # For workflow_dispatch: always run.
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'master')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'master'))
     runs-on: ubuntu-latest
     environment: pypi
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_sha }}
           fetch-tags: true
 
-      # Abort if no release tag points at this commit — Release Please ran
-      # but only updated the PR without creating a release.
+      # For workflow_run: abort if no release tag points at this commit.
       - name: Check for release tag
         id: tag_check
+        if: github.event_name == 'workflow_run'
         run: |
           TAG=$(git tag --points-at HEAD | grep -E '^alembic-gauntlet-v' | head -1)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -37,11 +44,11 @@ jobs:
           fi
           echo "Publishing $TAG"
 
-      - if: steps.tag_check.outputs.tag != ''
+      - if: github.event_name == 'workflow_dispatch' || steps.tag_check.outputs.tag != ''
         uses: astral-sh/setup-uv@v7
 
-      - if: steps.tag_check.outputs.tag != ''
+      - if: github.event_name == 'workflow_dispatch' || steps.tag_check.outputs.tag != ''
         run: uv build
 
-      - if: steps.tag_check.outputs.tag != ''
+      - if: github.event_name == 'workflow_dispatch' || steps.tag_check.outputs.tag != ''
         run: uv publish
