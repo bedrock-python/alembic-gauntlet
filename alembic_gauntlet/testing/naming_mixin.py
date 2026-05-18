@@ -77,9 +77,13 @@ class MigrationNamingMixin:
         # Special handling: PostgreSQL implements UniqueConstraint as indexes,
         # so when 'uq' convention is defined, add uq prefixes/suffixes to allowed_index_* as well
         if meta_rules.uq_prefixes:
-            resolved["allowed_index_prefixes"] = list(set(resolved["allowed_index_prefixes"]) | set(meta_rules.uq_prefixes))
+            resolved["allowed_index_prefixes"] = list(
+                set(resolved["allowed_index_prefixes"]) | set(meta_rules.uq_prefixes)
+            )
         if meta_rules.uq_suffixes:
-            resolved["allowed_index_suffixes"] = list(set(resolved["allowed_index_suffixes"]) | set(meta_rules.uq_suffixes))
+            resolved["allowed_index_suffixes"] = list(
+                set(resolved["allowed_index_suffixes"]) | set(meta_rules.uq_suffixes)
+            )
 
         # Layer 3: explicit class-level overrides (not inherited _UNSET sentinel).
         # Walk the MRO up to (but not including) MigrationNamingMixin itself so
