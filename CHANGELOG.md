@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.0...alembic-gauntlet-v0.2.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* add search pattern for __version__.py in release-please config ([#16](https://github.com/bedrock-python/alembic-gauntlet/issues/16)) ([adc75eb](https://github.com/bedrock-python/alembic-gauntlet/commit/adc75ebec944dc93e77b5f35c16a291ff1b3a6ab))
+* **naming:** add uq prefixes/suffixes to allowed_index_* when uq convention is defined ([#18](https://github.com/bedrock-python/alembic-gauntlet/issues/18)) ([633e680](https://github.com/bedrock-python/alembic-gauntlet/commit/633e680457365e713a0ee018ca711cdccc8fd6db))
+
 ## [0.2.0](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.1.0...alembic-gauntlet-v0.2.0) (2026-05-16)
 
 
