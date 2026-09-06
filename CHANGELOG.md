@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.2](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.1...alembic-gauntlet-v0.2.2) (2026-09-06)
+
+
+### Bug Fixes
+
+* import PostgresContainer from testcontainers.community when it exists ([#35](https://github.com/bedrock-python/alembic-gauntlet/issues/35)) ([95bb17e](https://github.com/bedrock-python/alembic-gauntlet/commit/95bb17ee9a206c7e55db792a2631654d0de02927))
+
+
+### Miscellaneous Chores
+
+* release the asyncio extra the docs already describe ([#32](https://github.com/bedrock-python/alembic-gauntlet/issues/32)) ([14e418f](https://github.com/bedrock-python/alembic-gauntlet/commit/14e418fa1323a7090c0c6a48bb4c525ffd99acc3))
+
 ## [0.2.1](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.0...alembic-gauntlet-v0.2.1) (2026-05-18)
 
 
