@@ -59,5 +59,17 @@ jobs:
           ref: ${{ needs.check.outputs.tag }}
 
       - uses: astral-sh/setup-uv@v7
+
+      # Release Please already committed this version; the rewrite is a safety
+      # net so a tag can never publish a stale version.
+      - name: Set version from release tag
+        run: |
+          VERSION="${{ needs.check.outputs.tag }}"
+          VERSION="${VERSION#alembic-gauntlet-v}"
+          echo "__version__ = \"$VERSION\"  # x-release-please-version" > alembic_gauntlet/__version__.py
+          cat alembic_gauntlet/__version__.py
+
       - run: uv build
-      - run: uv publish
+      # --check-url: a run repeated after a failure skips what is already on the
+      # index instead of failing on it.
+      - run: uv publish --check-url https://pypi.org/simple/alembic-gauntlet/
