@@ -175,7 +175,7 @@ That's it! The container is automatically:
 ### Custom container configuration
 
 ```python
-from testcontainers.postgres import PostgresContainer
+from testcontainers.community.postgres import PostgresContainer  # testcontainers.postgres before 4.15.0
 
 
 class TestWithCustomContainer(MigrationTestBase):
