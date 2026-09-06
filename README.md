@@ -9,6 +9,15 @@ Testing toolkit for Alembic migrations — run your migrations through the gaunt
 [![codecov](https://codecov.io/gh/bedrock-python/alembic-gauntlet/graph/badge.svg)](https://codecov.io/gh/bedrock-python/alembic-gauntlet)
 [![Docs](https://img.shields.io/badge/docs-online-blue)](https://bedrock-python.github.io/alembic-gauntlet/)
 
+> [!TIP]
+> **Building this with an AI assistant?** Hand it
+> **[one page](https://bedrock-python.github.io/alembic-gauntlet/agents/)** instead of the
+> whole site: the fixtures and helpers you actually get, the `env.py` contract the tests
+> depend on, the rules that break a suite when they are broken, the mistakes models make
+> with this API, and a map of which page to fetch for the rest. Every docs page is also
+> served as raw Markdown at its own URL, and a **Copy page** button at the top of each one
+> hands it straight to a chat window.
+
 ## Installation
 
 ```bash
@@ -50,6 +59,8 @@ That's it! You now have:
 ## Documentation
 
 Full documentation at [bedrock-python.github.io/alembic-gauntlet](https://bedrock-python.github.io/alembic-gauntlet/).
+
+- [For AI agents](https://bedrock-python.github.io/alembic-gauntlet/agents/) — the whole library on one page, written for a coding assistant.
 
 ## License
 
