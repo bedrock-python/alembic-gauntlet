@@ -372,16 +372,31 @@ async def test_stairway_upgrade_downgrade(
     alembic_config: Config,
 ) -> None:
     """Override to skip problematic revisions."""
-    revisions = await get_all_revisions(alembic_config)
+    revisions = get_all_revisions(alembic_config)  # plain call: this one is sync
     
     for revision in revisions:
         if revision == "abc123":  # Skip specific revision
             continue
         
         # Run stairway test for this revision
-        await run_alembic_upgrade(alembic_config, migration_engine, revision)
-        await run_alembic_downgrade(alembic_config, migration_engine, "-1")
-        await run_alembic_upgrade(alembic_config, migration_engine, revision)
+        await run_alembic_upgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+            revision=revision,
+        )
+        await run_alembic_downgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+            revision="-1",
+        )
+        await run_alembic_upgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+            revision=revision,
+        )
 ```
 
 ## Pytest markers

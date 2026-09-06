@@ -77,7 +77,7 @@ class TestNaming(MigrationSchemaMixin, MigrationNamingMixin):
 ### Add custom post-migration checks
 
 ```python
-from alembic_gauntlet import MigrationTestBase
+from alembic_gauntlet import MigrationTestBase, run_alembic_upgrade
 from sqlalchemy import text
 
 
@@ -90,7 +90,12 @@ class TestWithCustomChecks(MigrationTestBase):
     ) -> None:
         """Validate specific data constraints after migration."""
         # Run migrations
-        await run_alembic_upgrade(alembic_config, migration_engine, "head")
+        await run_alembic_upgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+            revision="head",
+        )
 
         # Check custom constraints
         async with migration_engine.begin() as conn:
@@ -112,7 +117,12 @@ async def test_migration_abc123_creates_index(
 ) -> None:
     """Verify migration abc123 creates expected index."""
     # Upgrade to specific revision
-    await run_alembic_upgrade(alembic_config, migration_engine, "abc123")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="abc123",
+    )
 
     # Verify index exists
     async with migration_engine.begin() as conn:
@@ -270,10 +280,18 @@ async def test_custom_naming_rules(
     alembic_config: Config,
 ) -> None:
     """Validate naming with custom per-table rules."""
-    await run_alembic_upgrade(alembic_config, migration_engine, "head")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="head",
+    )
 
-    async with migration_engine.begin() as conn:
-        results = await fetch_table_naming_results(conn, isolated_migration_schema)
+    # fetch_table_naming_results takes a *sync* connection: hand it one via run_sync.
+    async with migration_engine.connect() as conn:
+        results = await conn.run_sync(
+            lambda sync_conn: fetch_table_naming_results(sync_conn, schema=isolated_migration_schema)
+        )
 
     # Custom validation
     for table_name, info in results.items():
@@ -302,7 +320,12 @@ async def test_migration_preserves_data(
 ) -> None:
     """Ensure migration doesn't lose data."""
     # Insert test data at specific revision
-    await run_alembic_upgrade(alembic_config, migration_engine, "abc123")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="abc123",
+    )
     
     async with migration_engine.begin() as conn:
         await conn.execute(
@@ -311,7 +334,12 @@ async def test_migration_preserves_data(
         await conn.commit()
 
     # Upgrade to next revision
-    await run_alembic_upgrade(alembic_config, migration_engine, "def456")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="def456",
+    )
 
     # Verify data still exists
     async with migration_engine.begin() as conn:
@@ -333,7 +361,12 @@ async def test_backfill_migration(
 ) -> None:
     """Test data backfill in migration."""
     # Set up data before migration
-    await run_alembic_upgrade(alembic_config, migration_engine, "abc123")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="abc123",
+    )
     
     async with migration_engine.begin() as conn:
         # Insert records without new column
@@ -343,7 +376,12 @@ async def test_backfill_migration(
         await conn.commit()
 
     # Run migration with backfill
-    await run_alembic_upgrade(alembic_config, migration_engine, "def456")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="def456",
+    )
 
     # Verify backfill worked
     async with migration_engine.begin() as conn:
@@ -370,7 +408,12 @@ async def test_migration_performance(
 ) -> None:
     """Ensure migrations complete within time budget."""
     start = time.time()
-    await run_alembic_upgrade(alembic_config, migration_engine, "head")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="head",
+    )
     duration = time.time() - start
 
     # Fail if migration takes too long
@@ -388,7 +431,12 @@ async def test_large_data_migration_performance(
 ) -> None:
     """Test migration performance with large dataset."""
     # Set up large dataset
-    await run_alembic_upgrade(alembic_config, migration_engine, "abc123")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="abc123",
+    )
     
     async with migration_engine.begin() as conn:
         # Insert 1M records
@@ -404,7 +452,12 @@ async def test_large_data_migration_performance(
 
     # Time the migration
     start = time.time()
-    await run_alembic_upgrade(alembic_config, migration_engine, "def456")
+    await run_alembic_upgrade(
+        migration_engine,
+        alembic_config,
+        target_schema=isolated_migration_schema,
+        revision="def456",
+    )
     duration = time.time() - start
 
     print(f"Migration with 1M rows took {duration:.2f}s")
