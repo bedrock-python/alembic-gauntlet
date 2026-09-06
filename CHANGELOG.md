@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.1...alembic-gauntlet-v0.2.2) (2026-09-06)
+
+
+### Documentation
+
+* org-wide security policy and code of conduct ([#25](https://github.com/bedrock-python/alembic-gauntlet/issues/25)) ([b67c275](https://github.com/bedrock-python/alembic-gauntlet/commit/b67c2751874f626c691d4de1cff75fdd5d5306c5))
+
 ## [0.2.1](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.0...alembic-gauntlet-v0.2.1) (2026-05-18)
 
 
