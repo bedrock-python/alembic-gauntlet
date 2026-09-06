@@ -8,8 +8,8 @@
 |---|---|
 | Package | `alembic-gauntlet` on PyPI, import root `alembic_gauntlet` |
 | Requires | Python 3.10+, PostgreSQL, SQLAlchemy 2, Alembic 1.8+, pytest 7+ |
-| Install | `pip install alembic-gauntlet` · extras: `testcontainers` |
-| Also install | an async PostgreSQL driver (`asyncpg`) and `pytest-asyncio`, run in `asyncio_mode = "auto"` |
+| Install | `pip install "alembic-gauntlet[asyncio]"` · extras: `asyncio` (pytest-asyncio), `testcontainers` |
+| Also install | an async PostgreSQL driver (`asyncpg`); `pytest-asyncio` comes with the `asyncio` extra and has to run in `asyncio_mode = "auto"` |
 | Entry point | `MigrationTestBase` — inherit it, supply two fixtures, get five tests |
 | Pytest plugin | `alembic_gauntlet.fixtures` is registered under `pytest11`, so `alembic_config` and `migration_engine` exist with no import and no conftest entry |
 | Async / sync | everything that touches the database is a coroutine over an `AsyncEngine`; the naming, diff and validation helpers are ordinary sync functions |
@@ -223,9 +223,10 @@ and `pk_constraint`.
 
 1. **`asyncio_mode = "auto"`.** The inherited tests and the library's fixtures are
    `async def` declared with plain `@pytest.fixture` and no `asyncio` marker. Under
-   pytest-asyncio's default strict mode the tests are skipped and the fixtures arrive as
-   unawaited generators. Auto mode is a requirement, not a preference, and pytest-asyncio
-   is not a dependency of this package — install it yourself.
+   pytest-asyncio's default strict mode the tests fail with *async def functions are not
+   natively supported* and the fixtures arrive as unawaited generators. Auto mode is a
+   requirement, not a preference, and pytest-asyncio is not a hard dependency of this
+   package — take it from the `asyncio` extra or install it yourself.
 2. **The DSN must be async.** `create_async_engine` is called on `migration_db_url`
    verbatim, so `postgresql+asyncpg://…` (or another async driver) and the driver
    installed. A bare `postgresql://…` selects psycopg2 and never reaches the database:

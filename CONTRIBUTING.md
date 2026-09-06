@@ -17,7 +17,7 @@ uv run pre-commit install --hook-type commit-msg
 make check            # ruff lint + format check + mypy
 make test-unit        # unit tests, no Docker required
 make test-integration # integration tests, requires Docker
-make test             # full suite with 90% coverage threshold
+make test             # full suite with coverage, fails under 63%
 ```
 
 ## Code style

@@ -4,18 +4,23 @@ This guide will walk you through setting up `alembic-gauntlet` for your project.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - PostgreSQL database
+- An async PostgreSQL driver (`asyncpg`)
 - Existing Alembic migrations
 - SQLAlchemy ORM models
 
 ## Installation
 
-Install `alembic-gauntlet` using pip:
+Install `alembic-gauntlet` with the `asyncio` extra:
 
 ```bash
-pip install alembic-gauntlet
+pip install "alembic-gauntlet[asyncio]"
 ```
+
+The extra pulls in `pytest-asyncio`. The tests you inherit and the fixtures that feed them
+are plain `async def`, so without it your suite errors out — see
+[Configure pytest](#2-configure-pytest) for the one setting it needs.
 
 For automatic PostgreSQL container management with Testcontainers:
 
@@ -61,23 +66,32 @@ That's it! You now have 5 tests automatically:
 
 ### 2. Configure pytest
 
-Add integration marker to `pytest.ini` or `pyproject.toml`:
-
-```ini
-# pytest.ini
-[pytest]
-markers =
-    integration: marks tests as integration tests (require database)
-```
-
-Or in `pyproject.toml`:
+Turn on pytest-asyncio's auto mode and add the integration marker:
 
 ```toml
+# pyproject.toml
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: marks tests as integration tests (require database)",
 ]
 ```
+
+Or in `pytest.ini`:
+
+```ini
+[pytest]
+asyncio_mode = auto
+asyncio_default_fixture_loop_scope = function
+markers =
+    integration: marks tests as integration tests (require database)
+```
+
+`asyncio_mode` is a requirement, not a preference. The inherited tests and the
+`migration_engine` and `isolated_migration_schema` fixtures are declared with plain
+`@pytest.fixture` and no `asyncio` marker; under the default strict mode the tests fail
+with *async def functions are not natively supported* and the fixtures arrive unawaited.
 
 ### 3. Run the tests
 
@@ -195,16 +209,23 @@ for details.
 
 ## Using Testcontainers
 
-For automatic PostgreSQL container management, use the `testcontainers` extra:
+For automatic PostgreSQL container management, install the `testcontainers` extra and
+import the `migration_db_url` fixture it ships into your `conftest.py`:
+
+```python
+# tests/conftest.py
+from alembic_gauntlet.contrib.testcontainers import migration_db_url  # noqa: F401
+```
+
+Your test class then only needs `orm_metadata` — the fixture supplies the database:
 
 ```python
 import pytest
 from alembic_gauntlet import MigrationTestBase
-from alembic_gauntlet.contrib.testcontainers import TestcontainersDatabaseMixin
 
 
 @pytest.mark.integration
-class TestMyMigrations(TestcontainersDatabaseMixin, MigrationTestBase):
+class TestMyMigrations(MigrationTestBase):
     """Migrations with automatic PostgreSQL container."""
 
     @pytest.fixture
@@ -213,12 +234,14 @@ class TestMyMigrations(TestcontainersDatabaseMixin, MigrationTestBase):
         return Base.metadata
 ```
 
-The `TestcontainersDatabaseMixin` automatically:
-- Starts a PostgreSQL container before tests
-- Provides `migration_db_url` fixture
-- Cleans up container after tests
+The fixture is session-scoped, so one `postgres:17-alpine` container:
 
-No manual database setup required!
+- starts once per test session
+- yields its connection URL rewritten to `postgresql+asyncpg://`
+- is stopped when the session ends
+
+No manual database setup required. Override `migration_db_url` in your own conftest to
+point at a different database.
 
 ## Troubleshooting
 
