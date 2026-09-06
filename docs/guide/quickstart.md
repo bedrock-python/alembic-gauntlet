@@ -4,7 +4,7 @@ This guide will walk you through setting up `alembic-gauntlet` for your project.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - PostgreSQL database
 - Existing Alembic migrations
 - SQLAlchemy ORM models

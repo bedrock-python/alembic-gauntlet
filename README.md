@@ -24,7 +24,7 @@ Testing toolkit for Alembic migrations — run your migrations through the gaunt
 pip install alembic-gauntlet
 ```
 
-**Requirements:** Python 3.11+
+**Requirements:** Python 3.10+
 
 ## Quick start
 

@@ -24,7 +24,7 @@ pip install alembic-gauntlet
 pip install "alembic-gauntlet[testcontainers]"  # Auto-managed PostgreSQL container
 ```
 
-**Requirements:** Python 3.11+, PostgreSQL
+**Requirements:** Python 3.10+, PostgreSQL
 
 ## Quick example
 
