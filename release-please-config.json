@@ -9,8 +9,7 @@
       "extra-files": [
         {
           "type": "generic",
-          "path": "alembic_gauntlet/__version__.py",
-          "search": "__version__ = \"$1\""
+          "path": "alembic_gauntlet/__version__.py"
         }
       ]
     }
