@@ -57,6 +57,7 @@ Auto-generated API documentation from source code using [mkdocstrings](https://m
       heading_level: 4
       members:
         - validate_schema_name
+        - get_pg_reserved_words
 
 ### Diff utilities
 
@@ -75,6 +76,17 @@ Auto-generated API documentation from source code using [mkdocstrings](https://m
       members:
         - fetch_table_naming_results
         - validate_naming_results
+        - TableNamingResults
+        - ForeignKeyInfo
+
+### Naming convention rules
+
+::: alembic_gauntlet.utils.convention
+    options:
+      heading_level: 4
+      members:
+        - rules_from_metadata
+        - NamingConventionRules
 
 ## Fixtures
 
