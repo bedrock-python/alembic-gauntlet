@@ -21,10 +21,20 @@ Testing toolkit for Alembic migrations — run your migrations through the gaunt
 ## Installation
 
 ```bash
-pip install alembic-gauntlet
+pip install "alembic-gauntlet[asyncio]"
 ```
 
-**Requirements:** Python 3.10+
+The `asyncio` extra installs `pytest-asyncio`, which is not optional in practice: the
+inherited tests and both async fixtures are plain `async def`, so a suite without it
+errors out instead of running. It also has to be in auto mode:
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+```
+
+**Requirements:** Python 3.10+, PostgreSQL, and an async driver such as `asyncpg`
 
 ## Quick start
 

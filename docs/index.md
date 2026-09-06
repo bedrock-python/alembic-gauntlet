@@ -16,7 +16,18 @@
 ## Installation
 
 ```bash
-pip install alembic-gauntlet
+pip install "alembic-gauntlet[asyncio]"
+```
+
+The `asyncio` extra installs `pytest-asyncio`, which every consumer needs: the inherited
+tests and both async fixtures are plain `async def`, so a suite without it errors out
+instead of running. It also has to be in auto mode:
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 ```
 
 **Optional dependencies:**
@@ -24,7 +35,7 @@ pip install alembic-gauntlet
 pip install "alembic-gauntlet[testcontainers]"  # Auto-managed PostgreSQL container
 ```
 
-**Requirements:** Python 3.10+, PostgreSQL
+**Requirements:** Python 3.10+, PostgreSQL, and an async driver such as `asyncpg`
 
 ## Quick example
 

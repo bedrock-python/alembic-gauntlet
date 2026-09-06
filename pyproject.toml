@@ -38,6 +38,9 @@ alembic-gauntlet = "alembic_gauntlet.fixtures"
 
 [project.optional-dependencies]
 testcontainers = ["testcontainers[postgres]>=4.0.0"]
+# The inherited tests and both async fixtures are `async def`; without
+# pytest-asyncio in `asyncio_mode = "auto"` a consumer's suite errors out.
+asyncio = ["pytest-asyncio>=0.23.0"]
 
 [dependency-groups]
 test = [

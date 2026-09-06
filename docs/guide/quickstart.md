@@ -6,16 +6,21 @@ This guide will walk you through setting up `alembic-gauntlet` for your project.
 
 - Python 3.10+
 - PostgreSQL database
+- An async PostgreSQL driver (`asyncpg`)
 - Existing Alembic migrations
 - SQLAlchemy ORM models
 
 ## Installation
 
-Install `alembic-gauntlet` using pip:
+Install `alembic-gauntlet` with the `asyncio` extra:
 
 ```bash
-pip install alembic-gauntlet
+pip install "alembic-gauntlet[asyncio]"
 ```
+
+The extra pulls in `pytest-asyncio`. The tests you inherit and the fixtures that feed them
+are plain `async def`, so without it your suite errors out — see
+[Configure pytest](#2-configure-pytest) for the one setting it needs.
 
 For automatic PostgreSQL container management with Testcontainers:
 
@@ -61,23 +66,32 @@ That's it! You now have 5 tests automatically:
 
 ### 2. Configure pytest
 
-Add integration marker to `pytest.ini` or `pyproject.toml`:
-
-```ini
-# pytest.ini
-[pytest]
-markers =
-    integration: marks tests as integration tests (require database)
-```
-
-Or in `pyproject.toml`:
+Turn on pytest-asyncio's auto mode and add the integration marker:
 
 ```toml
+# pyproject.toml
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: marks tests as integration tests (require database)",
 ]
 ```
+
+Or in `pytest.ini`:
+
+```ini
+[pytest]
+asyncio_mode = auto
+asyncio_default_fixture_loop_scope = function
+markers =
+    integration: marks tests as integration tests (require database)
+```
+
+`asyncio_mode` is a requirement, not a preference. The inherited tests and the
+`migration_engine` and `isolated_migration_schema` fixtures are declared with plain
+`@pytest.fixture` and no `asyncio` marker; under the default strict mode the tests fail
+with *async def functions are not natively supported* and the fixtures arrive unawaited.
 
 ### 3. Run the tests
 
