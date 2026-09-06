@@ -33,10 +33,15 @@ def migration_db_url(self) -> str:
 
 **Scope**: Typically `session` to reuse the database URL across all tests.
 
-**Formats**:
+**Formats**: the URL goes to `create_async_engine` unchanged, so the driver has to be an
+async one and has to be installed:
+
 - `postgresql+asyncpg://user:pass@host:port/dbname` (recommended)
-- `postgresql+psycopg://user:pass@host:port/dbname`
-- `postgresql://user:pass@host:port/dbname`
+- `postgresql+psycopg://user:pass@host:port/dbname` (psycopg 3, async mode)
+
+A driverless `postgresql://user:pass@host:port/dbname` selects psycopg2 and is rejected —
+`InvalidRequestError: The asyncio extension requires an async driver to be used` where
+psycopg2 is installed, `ModuleNotFoundError` where it is not.
 
 ## Optional fixtures
 
@@ -342,12 +347,18 @@ def migration_db_url(self) -> str:
 
 ### Multiple databases
 
+The target has to be PostgreSQL — schema isolation, the reserved-word lookup through
+`pg_get_keywords()` and `DROP SCHEMA ... CASCADE` have no equivalent elsewhere, and a
+`cockroachdb+asyncpg` URL does not even reach the database (`NoSuchModuleError: Can't load
+plugin: sqlalchemy.dialects:cockroachdb.asyncpg`). Parametrise over PostgreSQL databases
+or server versions instead:
+
 ```python
-@pytest.fixture(scope="session", params=["postgresql", "cockroachdb"])
+@pytest.fixture(scope="session", params=["primary", "reporting"])
 def migration_db_url(self, request) -> str:
     db_urls = {
-        "postgresql": "postgresql+asyncpg://user:pass@localhost:5432/test_db",
-        "cockroachdb": "cockroachdb+asyncpg://root@localhost:26257/test_db",
+        "primary": "postgresql+asyncpg://user:pass@localhost:5432/primary_test",
+        "reporting": "postgresql+asyncpg://user:pass@localhost:5432/reporting_test",
     }
     return db_urls[request.param]
 ```
