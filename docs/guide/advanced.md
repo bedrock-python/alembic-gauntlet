@@ -133,11 +133,22 @@ async def test_migration_abc123_creates_index(
 
 ### Basic usage
 
+`contrib` ships a session-scoped `migration_db_url` fixture, not a mixin. Import it into a
+`conftest.py` and every test class below it gets a container-backed database:
+
 ```python
-from alembic_gauntlet.contrib.testcontainers import TestcontainersDatabaseMixin
+# tests/conftest.py
+from alembic_gauntlet.contrib.testcontainers import migration_db_url  # noqa: F401
+```
+
+```python
+# tests/test_migrations.py
+import pytest
+
+from alembic_gauntlet import MigrationTestBase
 
 
-class TestWithContainer(TestcontainersDatabaseMixin, MigrationTestBase):
+class TestWithContainer(MigrationTestBase):
     """Automatic PostgreSQL container management."""
 
     @pytest.fixture
@@ -147,9 +158,9 @@ class TestWithContainer(TestcontainersDatabaseMixin, MigrationTestBase):
 ```
 
 That's it! The container is automatically:
-- Started before tests
-- Configured with correct credentials
-- Cleaned up after tests
+- Started on first use, once per test session
+- Configured with correct credentials, with the URL rewritten to `postgresql+asyncpg://`
+- Stopped at the end of the session
 
 ### Custom container configuration
 

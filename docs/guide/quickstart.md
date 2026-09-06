@@ -195,16 +195,23 @@ for details.
 
 ## Using Testcontainers
 
-For automatic PostgreSQL container management, use the `testcontainers` extra:
+For automatic PostgreSQL container management, install the `testcontainers` extra and
+import the `migration_db_url` fixture it ships into your `conftest.py`:
+
+```python
+# tests/conftest.py
+from alembic_gauntlet.contrib.testcontainers import migration_db_url  # noqa: F401
+```
+
+Your test class then only needs `orm_metadata` — the fixture supplies the database:
 
 ```python
 import pytest
 from alembic_gauntlet import MigrationTestBase
-from alembic_gauntlet.contrib.testcontainers import TestcontainersDatabaseMixin
 
 
 @pytest.mark.integration
-class TestMyMigrations(TestcontainersDatabaseMixin, MigrationTestBase):
+class TestMyMigrations(MigrationTestBase):
     """Migrations with automatic PostgreSQL container."""
 
     @pytest.fixture
@@ -213,12 +220,14 @@ class TestMyMigrations(TestcontainersDatabaseMixin, MigrationTestBase):
         return Base.metadata
 ```
 
-The `TestcontainersDatabaseMixin` automatically:
-- Starts a PostgreSQL container before tests
-- Provides `migration_db_url` fixture
-- Cleans up container after tests
+The fixture is session-scoped, so one `postgres:17-alpine` container:
 
-No manual database setup required!
+- starts once per test session
+- yields its connection URL rewritten to `postgresql+asyncpg://`
+- is stopped when the session ends
+
+No manual database setup required. Override `migration_db_url` in your own conftest to
+point at a different database.
 
 ## Troubleshooting
 
