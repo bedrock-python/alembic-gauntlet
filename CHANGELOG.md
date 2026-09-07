@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.2...alembic-gauntlet-v0.3.0) (2026-09-07)
+
+
+### Features
+
+* catch server-default, CHECK-constraint and enum drift the diff test misses ([#38](https://github.com/bedrock-python/alembic-gauntlet/issues/38)) ([92933a2](https://github.com/bedrock-python/alembic-gauntlet/commit/92933a228368de1b5476ea41d89d3c57c4767388))
+
 ## [0.2.2](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.1...alembic-gauntlet-v0.2.2) (2026-09-06)
 
 
