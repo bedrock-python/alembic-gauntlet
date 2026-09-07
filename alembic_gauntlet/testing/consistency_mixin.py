@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from alembic.autogenerate import compare_metadata
@@ -11,7 +11,12 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import text
 
-from alembic_gauntlet.utils.diff import DEFAULT_IGNORE_TABLES, is_ignored_diff_item
+from alembic_gauntlet.utils.diff import (
+    DEFAULT_IGNORE_TABLES,
+    compare_check_constraints,
+    compare_enums,
+    is_ignored_diff_item,
+)
 from alembic_gauntlet.utils.migrations import (
     get_all_revisions,
     get_current_revision,
@@ -31,7 +36,16 @@ MigrationDiff = list[tuple[MigrateOperation, ...]]
 
 
 class MigrationConsistencyMixin:
-    """Core migration correctness tests."""
+    """Core migration correctness tests.
+
+    Optional class attributes:
+        - ``migration_diff_compare_server_default: bool`` — pass ``compare_server_default``
+          to Alembic in ``test_migrations_up_to_date``. Off by default, because a default
+          present on one side only — a Python-side ``default=`` in the model, a
+          ``server_default`` in the migration — is reported as drift.
+    """
+
+    migration_diff_compare_server_default: ClassVar[bool] = False
 
     async def test_stairway_upgrade_downgrade(
         self,
@@ -96,7 +110,10 @@ class MigrationConsistencyMixin:
             sync_conn.execute(text("SELECT set_config('search_path', :s, true)"), {"s": quoted})
             ctx = MigrationContext.configure(
                 sync_conn,
-                opts={"version_table_schema": isolated_migration_schema},
+                opts={
+                    "version_table_schema": isolated_migration_schema,
+                    "compare_server_default": self.migration_diff_compare_server_default,
+                },
             )
             diff = compare_metadata(ctx, orm_metadata)
             assert isinstance(diff, list)
@@ -109,6 +126,58 @@ class MigrationConsistencyMixin:
             f"Database schema is out of sync with ORM models. Differences:\n{diff}\n"
             "Run: alembic revision --autogenerate"
         )
+
+    async def test_check_constraints_match(
+        self,
+        alembic_config: Config,
+        migration_engine: AsyncEngine,
+        isolated_migration_schema: str,
+        orm_metadata: MetaData,
+    ) -> None:
+        """Verify the CHECK constraints after a full upgrade match the SQLAlchemy ORM metadata, by name.
+
+        ``compare_metadata()`` never compares CHECK constraints, so a constraint a
+        migration forgot is invisible to ``test_migrations_up_to_date``.
+        """
+        await run_alembic_upgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+        )
+
+        ignore_tables = frozenset(getattr(self, "migration_diff_ignore_tables", ()))
+        async with migration_engine.connect() as conn:
+            differences = await conn.run_sync(
+                lambda sc: compare_check_constraints(sc, orm_metadata, isolated_migration_schema, ignore_tables)
+            )
+
+        assert not differences, "CHECK constraints are out of sync with ORM models:\n" + "\n".join(differences)
+
+    async def test_enum_values_match(
+        self,
+        alembic_config: Config,
+        migration_engine: AsyncEngine,
+        isolated_migration_schema: str,
+        orm_metadata: MetaData,
+    ) -> None:
+        """Verify every native ``Enum`` column's values after a full upgrade match the type in the database, in order.
+
+        ``compare_metadata()`` never compares enum members, so a value a migration
+        forgot to add is invisible to ``test_migrations_up_to_date``.
+        """
+        await run_alembic_upgrade(
+            migration_engine,
+            alembic_config,
+            target_schema=isolated_migration_schema,
+        )
+
+        ignore_tables = frozenset(getattr(self, "migration_diff_ignore_tables", ()))
+        async with migration_engine.connect() as conn:
+            differences = await conn.run_sync(
+                lambda sc: compare_enums(sc, orm_metadata, isolated_migration_schema, ignore_tables)
+            )
+
+        assert not differences, "Enum values are out of sync with ORM models:\n" + "\n".join(differences)
 
     async def test_single_head_revision(self, alembic_config: Config) -> None:
         """Verify there is exactly one head revision (no unmerged branches)."""

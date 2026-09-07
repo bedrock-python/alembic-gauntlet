@@ -19,7 +19,8 @@ def orm_metadata(self) -> MetaData:
     return Base.metadata
 ```
 
-**When to use**: Always required for `test_migrations_up_to_date` and `test_naming_conventions`.
+**When to use**: Always required for `test_migrations_up_to_date`, `test_check_constraints_match`,
+`test_enum_values_match` and `test_naming_conventions`.
 
 ### migration_db_url
 
@@ -97,7 +98,8 @@ async def migration_engine(self, migration_db_url: str) -> AsyncEngine:
 
 ### migration_diff_ignore_tables
 
-**Purpose**: Ignore specific tables in schema consistency checks.
+**Purpose**: Ignore specific tables in the schema consistency, CHECK constraint, enum and
+naming checks.
 
 ```python
 from typing import ClassVar
@@ -113,6 +115,42 @@ class TestMyMigrations(MigrationTestBase):
 - Partitioned tables not managed by Alembic
 - External tables (e.g., PostGIS extension tables)
 - Temporary tables
+
+### migration_diff_compare_server_default
+
+**Purpose**: Compare server defaults in `test_migrations_up_to_date`.
+
+```python
+from typing import ClassVar
+
+
+class TestMyMigrations(MigrationTestBase):
+    migration_diff_compare_server_default: ClassVar[bool] = True
+```
+
+**Default**: `False` — Alembic's `compare_metadata()` skips server defaults unless asked,
+so a migration that says `server_default=sa.text("false")` where the model says
+`text("true")` passes the diff test until you turn this on.
+
+**What agrees**: on PostgreSQL, Alembic compares the two texts and, when they differ, asks
+the server whether the expressions are equal, so the spelling rarely matters:
+
+| Database default | Model spellings that agree |
+|------------------|----------------------------|
+| `true` | `text("true")`, `sa.true()`, `"true"`, `text("TRUE")`, `"1"` |
+| `now()` | `func.now()`, `text("now()")`, `text("CURRENT_TIMESTAMP")`, `func.current_timestamp()` |
+| `0` | `"0"`, `text("0")`, `"'0'"` |
+| `'pending'::character varying` | `"pending"`, `text("'pending'")` |
+| `'{}'::jsonb` | `text("'{}'::jsonb")`, `text("'{}'")`, `"{}"` |
+| `gen_random_uuid()` | `text("gen_random_uuid()")`, `func.gen_random_uuid()` |
+
+**What is reported**:
+- A different value: `false` in the database, `text("true")` in the model
+- Two different volatile functions: `clock_timestamp()` against `now()`
+- A default on one side only — a Python-side `default=True` in the model is not a server
+  default, so a migration with `server_default` and a model without one is drift
+
+A serial or identity primary key is never compared.
 
 ### allowed_index_prefixes
 

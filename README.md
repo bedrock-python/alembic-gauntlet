@@ -47,7 +47,7 @@ from myapp.db import Base
 
 @pytest.mark.integration
 class TestMyMigrations(MigrationTestBase):
-    """All five tests inherited automatically."""
+    """All seven tests inherited automatically."""
 
     @pytest.fixture
     def orm_metadata(self) -> MetaData:
@@ -62,6 +62,8 @@ That's it! You now have:
 
 - `test_stairway_upgrade_downgrade` — each migration forward and back
 - `test_migrations_up_to_date` — schema matches ORM models
+- `test_check_constraints_match` — CHECK constraints match ORM models, by name
+- `test_enum_values_match` — enum values match ORM models, in order
 - `test_single_head_revision` — no unmerged branches
 - `test_downgrade_all_the_way` — full downgrade to base
 - `test_naming_conventions` — indexes and FKs follow conventions

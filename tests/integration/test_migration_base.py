@@ -16,11 +16,13 @@ _SAMPLE_APP = Path(__file__).parent / "sample_app"
 
 @pytest.mark.integration
 class TestSampleMigrations(MigrationTestBase):
-    """Run all five MigrationTestBase checks against the sample app migrations.
+    """Run all seven MigrationTestBase checks against the sample app migrations.
 
     Tests inherited:
     - test_stairway_upgrade_downgrade
     - test_migrations_up_to_date
+    - test_check_constraints_match
+    - test_enum_values_match
     - test_single_head_revision
     - test_downgrade_all_the_way
     - test_naming_conventions

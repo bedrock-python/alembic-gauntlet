@@ -16,7 +16,7 @@ class MigrationTestBase(
 ):
     """Base class for database migration tests.
 
-    Inherit from this class and provide the following fixtures to get all five
+    Inherit from this class and provide the following fixtures to get all seven
     migration tests for free:
 
     Required fixtures:
@@ -30,7 +30,10 @@ class MigrationTestBase(
 
     Optional class attributes:
         - ``migration_diff_ignore_tables: list[str]`` — table names to exclude from
-          schema diff and naming checks (e.g. auto-generated partition tables).
+          the schema diff, check constraint, enum and naming checks (e.g. auto-generated
+          partition tables).
+        - ``migration_diff_compare_server_default: bool`` — also compare server defaults
+          in the schema diff. Off by default; see ``MigrationConsistencyMixin``.
         - ``allowed_index_prefixes``, ``allowed_index_suffixes``, ``allowed_fk_prefixes``,
           ``allowed_fk_suffixes``, ``allowed_check_prefixes``, ``allowed_check_suffixes``,
           ``allowed_uq_prefixes``, ``allowed_uq_suffixes``, ``allowed_pk_prefixes``,

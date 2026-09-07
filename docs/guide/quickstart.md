@@ -56,10 +56,12 @@ class TestMyMigrations(MigrationTestBase):
         return "postgresql+asyncpg://user:pass@localhost:5432/testdb"
 ```
 
-That's it! You now have 5 tests automatically:
+That's it! You now have 7 tests automatically:
 
 - `test_stairway_upgrade_downgrade` — each migration forward and back
 - `test_migrations_up_to_date` — schema matches ORM models
+- `test_check_constraints_match` — CHECK constraints match ORM models, by name
+- `test_enum_values_match` — enum values match ORM models, in order
 - `test_single_head_revision` — no unmerged branches
 - `test_downgrade_all_the_way` — full downgrade to base
 - `test_naming_conventions` — indexes and FKs follow conventions
@@ -114,6 +116,8 @@ When tests pass, you'll see:
 ```
 tests/migrations/test_migrations.py::TestMyMigrations::test_stairway_upgrade_downgrade PASSED
 tests/migrations/test_migrations.py::TestMyMigrations::test_migrations_up_to_date PASSED
+tests/migrations/test_migrations.py::TestMyMigrations::test_check_constraints_match PASSED
+tests/migrations/test_migrations.py::TestMyMigrations::test_enum_values_match PASSED
 tests/migrations/test_migrations.py::TestMyMigrations::test_single_head_revision PASSED
 tests/migrations/test_migrations.py::TestMyMigrations::test_downgrade_all_the_way PASSED
 tests/migrations/test_migrations.py::TestMyMigrations::test_naming_conventions PASSED
@@ -150,6 +154,42 @@ This test:
 - Forgot to run `alembic revision --autogenerate`
 - Model changes not reflected in migrations
 - Drift between database and code
+
+**Does not catch** what `compare_metadata()` does not compare: server defaults, unless
+you set `migration_diff_compare_server_default = True` (see
+[Configuration](configuration.md#migration_diff_compare_server_default) for which
+spellings agree), CHECK constraints and enum values. The next two tests cover those.
+
+### test_check_constraints_match
+
+**CHECK constraint check** — ensures every CHECK constraint your models declare exists.
+
+This test:
+1. Runs all migrations to HEAD
+2. Resolves each named `CheckConstraint` in your metadata to the name the DDL would give it
+3. Compares those names with the constraints on each table
+
+**Catches**:
+- A CHECK constraint the model declares and no migration created
+- A CHECK constraint left in the database after the model dropped it
+- A migration that named the constraint differently from the model
+
+Unnamed constraints are not compared, and expressions are never compared — PostgreSQL
+rewrites them. Name every CHECK constraint, ideally through a `ck` naming convention.
+
+### test_enum_values_match
+
+**Enum value check** — ensures every enum type has the values your models have.
+
+This test:
+1. Runs all migrations to HEAD
+2. Reads every enum type from the database
+3. Compares the values of each native `Enum` column with the type's labels, in order
+
+**Catches**:
+- A value added to the model and never added with `ALTER TYPE ... ADD VALUE`
+- A value the migration created that the model does not have
+- A value added in the wrong position
 
 ### test_single_head_revision
 
@@ -252,6 +292,19 @@ Your migrations are out of sync with ORM models. Run:
 ```bash
 alembic revision --autogenerate -m "sync models"
 ```
+
+### Test fails: "CHECK constraints are out of sync"
+
+A named CHECK constraint is in your models and not in the database, or the other way
+round. The message names it. Add the migration, or name the constraint the same way on
+both sides — under a `ck` naming convention, `op.create_check_constraint("amount_positive", ...)`
+resolves to the same name as the model.
+
+### Test fails: "Enum values are out of sync"
+
+The message shows the values in the database and in the model. Add a migration with
+`op.execute("ALTER TYPE order_status ADD VALUE 'shipped'")`, positioned with
+`BEFORE`/`AFTER` where the model has it.
 
 ### Test fails: "Multiple head revisions"
 

@@ -66,6 +66,8 @@ Auto-generated API documentation from source code using [mkdocstrings](https://m
       heading_level: 4
       members:
         - is_ignored_diff_item
+        - compare_check_constraints
+        - compare_enums
         - DEFAULT_IGNORE_TABLES
 
 ### Naming utilities

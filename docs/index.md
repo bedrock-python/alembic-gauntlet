@@ -8,6 +8,7 @@
 
 ✅ **Stairway tests** — verify every migration can upgrade and downgrade  
 ✅ **Schema consistency** — ensure migrations match your ORM models  
+✅ **CHECK constraints and enum values** — compared where autogenerate does not look  
 ✅ **Naming conventions** — validate index and foreign key names  
 ✅ **Branch detection** — catch unmerged migration branches  
 ✅ **Isolated schemas** — parallel-safe test execution  
@@ -48,7 +49,7 @@ from myapp.db import Base
 
 @pytest.mark.integration
 class TestMyMigrations(MigrationTestBase):
-    """All five tests inherited automatically."""
+    """All seven tests inherited automatically."""
 
     @pytest.fixture
     def orm_metadata(self) -> MetaData:
@@ -63,6 +64,8 @@ That's it! You now have:
 
 - `test_stairway_upgrade_downgrade` — each migration forward and back
 - `test_migrations_up_to_date` — schema matches ORM models
+- `test_check_constraints_match` — CHECK constraints match ORM models, by name
+- `test_enum_values_match` — enum values match ORM models, in order
 - `test_single_head_revision` — no unmerged branches
 - `test_downgrade_all_the_way` — full downgrade to base
 - `test_naming_conventions` — indexes and FKs follow conventions
@@ -80,6 +83,7 @@ Alembic migrations are powerful but error-prone. Common issues:
 
 - ❌ Migration works forward but breaks on downgrade
 - ❌ Forgot to run `alembic revision --autogenerate` after model changes
+- ❌ A CHECK constraint or an enum value the migration got wrong and autogenerate never reports
 - ❌ Unmerged migration branches cause conflicts
 - ❌ Inconsistent naming breaks your team's conventions
 
