@@ -49,6 +49,8 @@ class TestConsistency(MigrationSchemaMixin, MigrationConsistencyMixin):
 Now you get:
 - ✅ `test_stairway_upgrade_downgrade`
 - ✅ `test_migrations_up_to_date`
+- ✅ `test_check_constraints_match`
+- ✅ `test_enum_values_match`
 - ✅ `test_single_head_revision`
 - ✅ `test_downgrade_all_the_way`
 - ❌ `test_naming_conventions` (not included)

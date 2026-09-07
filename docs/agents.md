@@ -10,7 +10,7 @@
 | Requires | Python 3.10+, PostgreSQL, SQLAlchemy 2, Alembic 1.8+, pytest 7+ |
 | Install | `pip install "alembic-gauntlet[asyncio]"` · extras: `asyncio` (pytest-asyncio), `testcontainers` |
 | Also install | an async PostgreSQL driver (`asyncpg`); `pytest-asyncio` comes with the `asyncio` extra and has to run in `asyncio_mode = "auto"` |
-| Entry point | `MigrationTestBase` — inherit it, supply two fixtures, get five tests |
+| Entry point | `MigrationTestBase` — inherit it, supply two fixtures, get seven tests |
 | Pytest plugin | `alembic_gauntlet.fixtures` is registered under `pytest11`, so `alembic_config` and `migration_engine` exist with no import and no conftest entry |
 | Async / sync | everything that touches the database is a coroutine over an `AsyncEngine`; the naming, diff and validation helpers are ordinary sync functions |
 | Source | <https://github.com/bedrock-python/alembic-gauntlet> |
@@ -35,12 +35,13 @@ a method that sounds plausible.
 ## Scope
 
 **It does** run your real Alembic history against a real PostgreSQL database, inside a
-throwaway schema, as five pytest tests you inherit: every revision up and back down one
+throwaway schema, as seven pytest tests you inherit: every revision up and back down one
 step at a time, a full downgrade to base, an autogenerate diff of the migrated database
-against your ORM metadata, a single-head check, and a naming check over every index,
-foreign key, check, unique and primary key constraint. The pieces underneath — upgrade,
-downgrade, current revision, all revisions, an isolated schema — are public, so you can
-write your own checks with them.
+against your ORM metadata, a name-by-name comparison of its CHECK constraints, a
+value-by-value comparison of its enum types, a single-head check, and a naming check over
+every index, foreign key, check, unique and primary key constraint. The pieces underneath
+— upgrade, downgrade, current revision, all revisions, an isolated schema, the two
+comparisons — are public, so you can write your own checks with them.
 
 **It does not** create the database, write your `env.py`, or run migrations anywhere but a
 test. It never shells out to the `alembic` command; it drives `alembic.command` in-process
@@ -73,7 +74,7 @@ Five nouns and one contract.
   database in the wrong schema and every test above becomes theatre. See
   [Configuring env.py](guide/env-py.md).
 * **`MigrationTestBase`** is `MigrationSchemaMixin` + `MigrationConsistencyMixin` +
-  `MigrationNamingMixin`. Inherit the mixins directly when you want fewer than five tests;
+  `MigrationNamingMixin`. Inherit the mixins directly when you want fewer than seven tests;
   `MigrationSchemaMixin` has to be among them, because the other two request
   `isolated_migration_schema`.
 
@@ -127,7 +128,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 ```
 
-That is the whole integration: five tests, named in the table below, collected from the
+That is the whole integration: seven tests, named in the table below, collected from the
 base class.
 
 ## The API
@@ -136,7 +137,7 @@ base class.
 
 | Name | Kind | Signature and result |
 |---|---|---|
-| `MigrationTestBase` | class | the base class carrying all five tests |
+| `MigrationTestBase` | class | the base class carrying all seven tests |
 | `run_alembic_upgrade` | coroutine | `(engine, alembic_config, target_schema="public", revision="head") -> None` |
 | `run_alembic_downgrade` | coroutine | `(engine, alembic_config, target_schema="public", revision="base") -> None` |
 | `get_current_revision` | coroutine | `(engine, target_schema="public") -> str | None` — `None` means base |
@@ -154,7 +155,7 @@ pass them by name.
 |---|---|
 | `MigrationTestBase` | the three mixins, plus `migration_diff_ignore_tables: ClassVar[list[str]] = []` |
 | `MigrationSchemaMixin` | the `isolated_migration_schema` fixture, and nothing else |
-| `MigrationConsistencyMixin` | `test_stairway_upgrade_downgrade`, `test_migrations_up_to_date`, `test_single_head_revision`, `test_downgrade_all_the_way` |
+| `MigrationConsistencyMixin` | `test_stairway_upgrade_downgrade`, `test_migrations_up_to_date`, `test_check_constraints_match`, `test_enum_values_match`, `test_single_head_revision`, `test_downgrade_all_the_way`, and `migration_diff_compare_server_default: ClassVar[bool] = False` |
 | `MigrationNamingMixin` | `test_naming_conventions`, the ten `allowed_*` class attributes and the rule resolution |
 | `MigrationDiff` | type alias `list[tuple[MigrateOperation, ...]]` — what `compare_metadata()` returns |
 
@@ -169,12 +170,14 @@ pass them by name.
 | `migration_engine` | plugin | function | `AsyncEngine` with `NullPool`, disposed afterwards |
 | `isolated_migration_schema` | `MigrationSchemaMixin` | function | `test_mig_<8 hex chars>`, dropped with `CASCADE` |
 
-### The five tests
+### The seven tests
 
 | Test | Requests | Asserts |
 |---|---|---|
 | `test_stairway_upgrade_downgrade` | config, engine, schema | for each revision base → head: upgrade to it, current revision matches, downgrade one step, current revision matches the step below, upgrade back |
-| `test_migrations_up_to_date` | config, engine, schema, `orm_metadata` | after a full upgrade, `compare_metadata()` against your metadata is empty once ignored tables are filtered out |
+| `test_migrations_up_to_date` | config, engine, schema, `orm_metadata` | after a full upgrade, `compare_metadata()` against your metadata is empty once ignored tables are filtered out; server defaults take part only when `migration_diff_compare_server_default` is on |
+| `test_check_constraints_match` | config, engine, schema, `orm_metadata` | after a full upgrade, every named CHECK constraint in your metadata exists under the name the DDL would give it, and a table whose model names all of its check constraints has no others |
+| `test_enum_values_match` | config, engine, schema, `orm_metadata` | after a full upgrade, every native, named `Enum` column's values equal the database type's labels, in order |
 | `test_single_head_revision` | config | `ScriptDirectory.get_revisions("heads")` has exactly one entry |
 | `test_downgrade_all_the_way` | config, engine, schema | upgrade to head, then step down through every revision to base; the final current revision is `None` |
 | `test_naming_conventions` | config, engine, schema, `orm_metadata` | after a full upgrade, every index, foreign key, check, unique and primary key name in the schema matches the resolved rules |
@@ -187,7 +190,8 @@ message — there is no custom exception for a failed check.
 
 | Attribute | Default | Effect |
 |---|---|---|
-| `migration_diff_ignore_tables` | `[]` | added to `DEFAULT_IGNORE_TABLES` (`{"alembic_version"}`) for the diff test, and drops those tables from the naming test |
+| `migration_diff_ignore_tables` | `[]` | added to `DEFAULT_IGNORE_TABLES` (`{"alembic_version"}`) for the diff test, and drops those tables from the check constraint, enum and naming tests |
+| `migration_diff_compare_server_default` | `False` | passes `compare_server_default` to Alembic in the diff test; rule 9 below says what agrees and what is reported |
 | `allowed_index_prefixes` | `["idx_", "uq_"]` | index names |
 | `allowed_index_suffixes` | `["_idx", "_pkey", "_key"]` | index names, one optional trailing digit tolerated (`users_pkey1`) |
 | `allowed_fk_prefixes` / `allowed_fk_suffixes` | `["fk_"]` / `["_fkey"]` | foreign key constraint names |
@@ -211,6 +215,8 @@ because PostgreSQL implements a unique constraint as an index.
 | `alembic_gauntlet.utils.naming.validate_naming_results` | `(results, allowed_index_prefixes, …, allowed_pk_suffixes) -> None` | asserts; every `allowed_*` argument is required |
 | `alembic_gauntlet.utils.diff.is_ignored_diff_item` | `(diff_item, ignore_tables) -> bool` | filters `remove_table` and `remove_index` items only |
 | `alembic_gauntlet.utils.diff.DEFAULT_IGNORE_TABLES` | `frozenset({"alembic_version"})` | the baseline of the diff filter |
+| `alembic_gauntlet.utils.diff.compare_check_constraints` | `(sync_conn, metadata, schema, ignore_tables=frozenset()) -> list[str]` | **sync**; one line per CHECK constraint that differs by name, empty when in sync |
+| `alembic_gauntlet.utils.diff.compare_enums` | `(sync_conn, metadata, schema, ignore_tables=frozenset()) -> list[str]` | **sync**; one line per enum type whose values differ, in order, empty when in sync |
 | `alembic_gauntlet.utils.validation.validate_schema_name` | `(name, connection=None) -> None` | format, 63-byte length, and reserved words when a connection is given |
 | `alembic_gauntlet.utils.validation.get_pg_reserved_words` | `(connection) -> set[str]` | reads `pg_get_keywords()` |
 | `alembic_gauntlet.utils.convention.rules_from_metadata` | `(metadata) -> NamingConventionRules` | the layer-two extraction, as a dataclass of ten lists |
@@ -251,32 +257,62 @@ and `pk_constraint`.
 7. **The isolated schema is dropped with `CASCADE`.** Everything a migration created
    inside it is gone at the end of the test — and nothing it created outside it is cleaned
    up at all.
-8. **`migration_diff_ignore_tables` only silences removals.** `is_ignored_diff_item`
-   recognises `remove_table` and `remove_index`, meaning tables in the database that your
-   models do not know about. A table your models declare and the migrations never created
-   is always reported, whatever you list.
-9. **A name passes on a prefix *or* a suffix.** The checks are not per-object-type
+8. **`migration_diff_ignore_tables` only silences removals in the diff test.**
+   `is_ignored_diff_item` recognises `remove_table` and `remove_index`, meaning tables in
+   the database that your models do not know about. A table your models declare and the
+   migrations never created is always reported, whatever you list. The check constraint,
+   enum and naming tests skip the listed tables outright.
+9. **Server defaults are compared only on request.** `compare_metadata()` skips them
+   unless `compare_server_default` is set, and the diff test passes
+   `migration_diff_compare_server_default`, which is `False`. With it on, Alembic's
+   PostgreSQL comparison compares the two texts and, when they differ, asks the server
+   whether the expressions are equal: `text("true")`, `sa.true()` and `"true"` all agree
+   with a column defaulted to `true`, `func.now()` agrees with `now()` and
+   `CURRENT_TIMESTAMP`, `"0"` with `0`, `text("'{}'")` with `'{}'::jsonb`, and
+   `gen_random_uuid()` with itself. Reported: a different value, two different volatile
+   functions (`clock_timestamp()` against `now()`), and a default present on one side only
+   — a Python-side `default=` in the model is not a server default. A serial or identity
+   primary key is never compared.
+10. **CHECK constraints are compared by name, and only named ones.**
+    `test_check_constraints_match` resolves each metadata constraint to the name the DDL
+    would give it — the convention applied, a deferred `Boolean(create_constraint=True)`
+    name filled in, a name over 63 characters truncated — and compares that with
+    `get_check_constraints`. Expressions are never compared; PostgreSQL rewrites
+    `amount > 0` as `(amount > (0)::numeric)`. An unnamed metadata constraint is skipped,
+    and on its table the test also stops reporting database constraints the models lack,
+    because PostgreSQL gave the unnamed one a name of its own. Name every check constraint;
+    a `ck` template with `%(constraint_name)s` enforces that. Alembic's own name-based
+    detection is a plugin that was on by default in 1.19.0 and 1.19.1 and is opt-in from
+    1.19.2; this test does not use it, and on those two versions the diff test reports
+    named CHECK constraints as well.
+11. **Enum values are compared in order, per type the models use.**
+    `test_enum_values_match` reads `get_enums()` and compares the labels with `Enum.enums`
+    as lists for every native, named `Enum` column, looking in `Enum.schema` when set and
+    in the isolated schema otherwise. A type nothing references, a non-native enum and an
+    unnamed one are not compared. A migration that adds a value with `ALTER TYPE … ADD
+    VALUE` has to put it where the model has it.
+12. **A name passes on a prefix *or* a suffix.** The checks are not per-object-type
    exclusive and not anchored to your convention: `users_pkey` passes the primary key rule
    on `_pkey` even when you set `allowed_pk_prefixes = ["pk_"]`, because the default suffix
    is still in the resolved set. Empty both lists for a category and nothing can pass it.
-10. **Layer two replaces, layer three overrides, and the walk stops at the mixin.** An
+13. **Layer two replaces, layer three overrides, and the walk stops at the mixin.** An
     explicit `allowed_*` attribute counts when it is set on your class or an intermediate
     base; the MRO walk breaks at `MigrationNamingMixin`, so its own sentinel values never
     win. A convention template with no literal part — `"%(table_name)s_%(column_0_name)s"` —
     contributes nothing and leaves the defaults in place.
-11. **PostgreSQL only.** Isolated schemas, `pg_get_keywords()`, `DROP SCHEMA … CASCADE`
+14. **PostgreSQL only.** Isolated schemas, `pg_get_keywords()`, `DROP SCHEMA … CASCADE`
     and the constraint inspection are PostgreSQL. There is no SQLite or MySQL path, and a
     `cockroachdb+asyncpg` URL is not a supported target.
-12. **Mixin fixtures are class fixtures.** `isolated_migration_schema` is defined on
+15. **Mixin fixtures are class fixtures.** `isolated_migration_schema` is defined on
     `MigrationSchemaMixin`, so it exists only inside a class that inherits it. A module-level
     test function cannot request it; call `create_isolated_migration_schema` instead.
-13. **`create_isolated_migration_schema` is an async generator, not a context manager.**
+16. **`create_isolated_migration_schema` is an async generator, not a context manager.**
     Drive it with `async for`, or wrap it in your own fixture; it has no `__aenter__`, so
     `async with` fails before the schema is ever created.
-14. **Keep `NullPool` if you replace `migration_engine`.** Function scope plus `NullPool`
+17. **Keep `NullPool` if you replace `migration_engine`.** Function scope plus `NullPool`
     is what keeps a schema-scoped `search_path` from leaking into the next test and what
     makes `pytest -n auto` safe.
-15. **Schema names are validated before they reach SQL.** `validate_schema_name` runs on
+18. **Schema names are validated before they reach SQL.** `validate_schema_name` runs on
     every `target_schema` the runners are given, and rejects anything that is not a plain
     identifier, is longer than 63 characters, or is a PostgreSQL reserved word. Do not
     build schema names from unvalidated input and interpolate them yourself.
@@ -328,6 +364,27 @@ def migration_db_url() -> str:
 ```
 
 ```python
+# WRONG — expecting the diff test to report a wrong server default
+class TestMigrations(MigrationTestBase):
+    ...                                   # passes with is_active DEFAULT false where the model says true
+
+# RIGHT — turn the comparison on; CHECK constraints and enum values have their own tests
+class TestMigrations(MigrationTestBase):
+    migration_diff_compare_server_default = True
+```
+
+```python
+# WRONG — an unnamed CHECK constraint is never compared, and a migration that spells the
+# conventional name out gets the convention applied to it again (chk_orders_chk_orders_…)
+__table_args__ = (CheckConstraint("amount > 0"),)
+op.create_table("orders", ..., sa.CheckConstraint("amount > 0", name="chk_orders_amount_positive"))
+
+# RIGHT — name it in the model and let the convention resolve it; op.f() keeps a name as written
+__table_args__ = (CheckConstraint("amount > 0", name="amount_positive"),)   # chk_orders_amount_positive
+op.create_table("orders", ..., sa.CheckConstraint("amount > 0", name=op.f("chk_orders_amount_positive")))
+```
+
+```python
 # WRONG — an env.py that builds its own engine and ignores the injected one
 def run_migrations_online() -> None:
     engine = create_engine(config.get_main_option("sqlalchemy.url"))
@@ -370,7 +427,7 @@ Fetch a page when the task is the one named beside it.
 | Page | Read it when |
 |---|---|
 | [Home](index.md) | the one-paragraph pitch and the shortest possible example |
-| [Quick start](guide/quickstart.md) | setting the suite up step by step, and what each of the five tests catches |
+| [Quick start](guide/quickstart.md) | setting the suite up step by step, and what each of the seven tests catches |
 | [Configuration](guide/configuration.md) | every fixture and class attribute, with worked examples and the naming resolution order |
 | [Configuring env.py](guide/env-py.md) | the `connection` / `target_schema` contract, `SET LOCAL`, advisory locks, `include_object` filtering |
 | [Advanced](guide/advanced.md) | composing mixins by hand, custom checks on the isolated schema, partitioned tables, CI shapes |
