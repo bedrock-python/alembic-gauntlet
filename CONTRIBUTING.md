@@ -17,7 +17,7 @@ uv run pre-commit install --hook-type commit-msg
 make check            # ruff lint + format check + mypy
 make test-unit        # unit tests, no Docker required
 make test-integration # integration tests, requires Docker
-make test             # full suite with coverage, fails under 63%
+make test             # full suite with coverage, fails under 63%, requires Docker; CI runs it too
 ```
 
 ## Code style
@@ -49,7 +49,7 @@ Breaking changes: add `!` after the type (`feat!:`) or include a `BREAKING CHANG
 1. Fork the repository
 2. Create a branch from `master`: `git checkout -b feat/my-feature`
 3. Make your changes with tests
-4. Run `make check && make test-unit` locally
+4. Run `make check && make test` locally (without Docker, `make test-unit` covers the unit tests only)
 5. Open a PR against `master`
 
 ## The agents page
