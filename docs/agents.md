@@ -174,7 +174,7 @@ pass them by name.
 
 | Test | Requests | Asserts |
 |---|---|---|
-| `test_stairway_upgrade_downgrade` | config, engine, schema | for each revision base → head: upgrade to it, current revision matches, downgrade one step, current revision matches the step below, upgrade back |
+| `test_stairway_upgrade_downgrade` | config, engine, schema | for each revision base → head, the head included: upgrade to it, current revision matches, downgrade one step, current revision matches the step below, upgrade back, current revision matches again |
 | `test_migrations_up_to_date` | config, engine, schema, `orm_metadata` | after a full upgrade, `compare_metadata()` against your metadata is empty once ignored tables are filtered out; server defaults take part only when `migration_diff_compare_server_default` is on |
 | `test_check_constraints_match` | config, engine, schema, `orm_metadata` | after a full upgrade, every named CHECK constraint in your metadata exists under the name the DDL would give it, and a table whose model names all of its check constraints has no others |
 | `test_enum_values_match` | config, engine, schema, `orm_metadata` | after a full upgrade, every native, named `Enum` column's values equal the database type's labels, in order |

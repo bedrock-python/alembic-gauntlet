@@ -55,12 +55,13 @@ class MigrationConsistencyMixin:
     ) -> None:
         """Verify every migration can be applied and rolled back individually (stairway test).
 
-        For each revision in chronological order:
+        For each revision in chronological order, the head included:
         1. Upgrade to this revision.
         2. Assert current revision matches.
         3. Downgrade to the previous revision (or base).
         4. Assert the downgrade succeeded.
-        5. Upgrade back before moving to the next step.
+        5. Upgrade back and assert the revision again. A downgrade that leaves behind
+           a table or column its upgrade creates fails here, on the second ``upgrade()``.
         """
         revisions = get_all_revisions(alembic_config)
         if not revisions:
@@ -83,10 +84,11 @@ class MigrationConsistencyMixin:
                 f"After downgrade from {revision!r} to {target!r}, expected {expected!r}, got {current_after!r}."
             )
 
-            if i < len(revisions) - 1:
-                await run_alembic_upgrade(
-                    migration_engine, alembic_config, target_schema=isolated_migration_schema, revision=revision
-                )
+            await run_alembic_upgrade(
+                migration_engine, alembic_config, target_schema=isolated_migration_schema, revision=revision
+            )
+            current_again = await get_current_revision(migration_engine, target_schema=isolated_migration_schema)
+            assert current_again == revision, f"After upgrading back to {revision!r}, got {current_again!r}."
 
     async def test_migrations_up_to_date(
         self,
