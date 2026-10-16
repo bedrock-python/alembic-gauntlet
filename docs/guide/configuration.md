@@ -294,13 +294,26 @@ class TestMyMigrations(MigrationTestBase):
 | Layer | Source | Notes |
 |-------|--------|-------|
 | 1 | Built-in defaults | Always present as a baseline |
-| 2 | `MetaData.naming_convention` | Overrides defaults when non-empty templates are found |
-| 3 | Explicit class attributes | Always wins — set only what you want to override |
+| 2 | `MetaData.naming_convention` | Replaces both lists of a category whose template has a literal prefix or suffix |
+| 3 | Explicit class attributes | Always wins, one list at a time — set only what you want to override |
 
 Layer 2 extracts the literal prefix (text before the first `%(`) and the literal
 suffix (text after the last `)s`) from each template. Fully dynamic templates
 like `"%(table_name)s_%(column_0_name)s"` produce no prefix or suffix and are
-silently ignored.
+silently ignored, and their category keeps the defaults.
+
+A template sets the whole rule for its category. With `"fk": "fk_%(table_name)s_%(column_0_name)s"`
+the foreign key rules are prefixes `["fk_"]` and suffixes `[]`: the default `_fkey` suffix is
+dropped, so a constraint PostgreSQL named itself, like `orders_user_id_fkey`, fails the test.
+That name differs from the one your models produce, and an `op.drop_constraint()` that uses
+the convention's name will not find it. If you have such constraints and want to accept them
+anyway, add the suffix back explicitly:
+
+```python
+class TestMyMigrations(MigrationTestBase):
+    allowed_fk_suffixes: ClassVar[list[str]] = ["_fkey"]
+    allowed_pk_suffixes: ClassVar[list[str]] = ["_pkey"]
+```
 
 ## Complete example
 

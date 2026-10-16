@@ -202,8 +202,11 @@ message — there is no custom exception for a failed check.
 Rules resolve in three layers, last wins: the defaults above, then whatever
 `rules_from_metadata(orm_metadata)` extracts from `orm_metadata.naming_convention`, then
 attributes set explicitly on your class. Layer two takes the literal text before the first
-`%(` as a prefix and the literal text after the last `)s` as a suffix, replaces a category
-only when it found one, and ignores SQLAlchemy's own built-in convention
+`%(` as a prefix and the literal text after the last `)s` as a suffix. When it finds
+either, it replaces both lists of that category, so `"pk": "pk_%(table_name)s"` resolves
+to `allowed_pk_prefixes = ["pk_"]` and `allowed_pk_suffixes = []`, and PostgreSQL's own
+`orders_pkey` fails. A category with no template, or a template with no literal part,
+keeps its defaults. Layer two ignores SQLAlchemy's own built-in convention
 (`{"ix": "ix_%(column_0_label)s"}` alone). A `uq` template also joins the index rules,
 because PostgreSQL implements a unique constraint as an index.
 
@@ -294,8 +297,13 @@ and `pk_constraint`.
 12. **A name passes on a prefix *or* a suffix.** The checks are not per-object-type
    exclusive and not anchored to your convention: `users_pkey` passes the primary key rule
    on `_pkey` even when you set `allowed_pk_prefixes = ["pk_"]`, because the default suffix
-   is still in the resolved set. Empty both lists for a category and nothing can pass it.
-13. **Layer two replaces, layer three overrides, and the walk stops at the mixin.** An
+   is still in the resolved set. A `naming_convention` template does not have this gap: it
+   sets both lists of its category. Empty both lists for a category and nothing can pass it.
+13. **Layer two replaces per category, layer three per list, and the walk stops at the
+    mixin.** A convention template with a literal part sets both lists of its category, so
+    a prefix-only template empties the suffix list, and the reverse. To keep accepting
+    PostgreSQL's own names next to a prefix convention, add them explicitly:
+    `allowed_fk_suffixes = ["_fkey"]`, `allowed_pk_suffixes = ["_pkey"]`. An
     explicit `allowed_*` attribute counts when it is set on your class or an intermediate
     base; the MRO walk breaks at `MigrationNamingMixin`, so its own sentinel values never
     win. A convention template with no literal part — `"%(table_name)s_%(column_0_name)s"` —
