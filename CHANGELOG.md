@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.3.0...alembic-gauntlet-v0.3.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* let a naming_convention template set both prefix and suffix rules of its category ([#56](https://github.com/bedrock-python/alembic-gauntlet/issues/56)) ([578bb90](https://github.com/bedrock-python/alembic-gauntlet/commit/578bb90568f65e902e304676a5ebf85ad227b88c)), closes [#54](https://github.com/bedrock-python/alembic-gauntlet/issues/54)
+* make the stairway test upgrade the newest migration again after its downgrade ([#55](https://github.com/bedrock-python/alembic-gauntlet/issues/55)) ([27e3acb](https://github.com/bedrock-python/alembic-gauntlet/commit/27e3acbc5949fe2cdb12f58b7f05cd6dd3d53022)), closes [#53](https://github.com/bedrock-python/alembic-gauntlet/issues/53)
+
 ## [0.3.0](https://github.com/bedrock-python/alembic-gauntlet/compare/alembic-gauntlet-v0.2.2...alembic-gauntlet-v0.3.0) (2026-09-07)
 
 
