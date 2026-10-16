@@ -131,7 +131,7 @@ tests/migrations/test_migrations.py::TestMyMigrations::test_naming_conventions P
 
 This test:
 1. Gets all revisions from Alembic
-2. For each revision:
+2. For each revision, the newest one included:
    - Upgrades to that revision
    - Downgrades one step
    - Upgrades again
@@ -317,6 +317,10 @@ alembic merge -m "merge heads" head_1 head_2
 ### Test fails on downgrade
 
 Your migration is missing downgrade operations. Edit the migration file and add proper `downgrade()` logic.
+
+The same mistake can also show up as an error in an upgrade: if the stairway test fails with
+`DuplicateTable` or `DuplicateColumn` when it upgrades a revision the second time, that revision's
+`downgrade()` left the object behind.
 
 ### Connection errors
 
