@@ -22,8 +22,10 @@ class MigrationNamingMixin:
     Naming rules are resolved in three layers (last wins):
 
     1. Built-in defaults (e.g. ``allowed_fk_suffixes = ["_fkey"]``).
-    2. Rules derived from ``orm_metadata.naming_convention`` (if present).
-    3. Attributes explicitly set on the subclass.
+    2. Rules derived from ``orm_metadata.naming_convention`` (if present). A template
+       with a literal prefix or suffix sets both lists of its category, so
+       ``"pk": "pk_%(table_name)s"`` leaves ``allowed_pk_suffixes`` empty.
+    3. Attributes explicitly set on the subclass, one list at a time.
 
     Layer 3 wins only when the attribute is explicitly overridden on the class,
     not inherited from ``MigrationNamingMixin`` itself.
@@ -58,21 +60,21 @@ class MigrationNamingMixin:
         # Layer 1: defaults
         resolved = dict(self._DEFAULTS)
 
-        # Layer 2: rules derived from naming_convention
+        # Layer 2: rules derived from naming_convention, per category. A template with a
+        # literal on one side only must not keep the other side's default: for fk and pk
+        # those defaults are the names PostgreSQL gives unnamed constraints.
         meta_rules = rules_from_metadata(metadata)
-        meta_attr_map = {
-            "allowed_index_prefixes": meta_rules.index_prefixes,
-            "allowed_index_suffixes": meta_rules.index_suffixes,
-            "allowed_fk_prefixes": meta_rules.fk_prefixes,
-            "allowed_fk_suffixes": meta_rules.fk_suffixes,
-            "allowed_check_prefixes": meta_rules.check_prefixes,
-            "allowed_check_suffixes": meta_rules.check_suffixes,
-            "allowed_uq_prefixes": meta_rules.uq_prefixes,
-            "allowed_uq_suffixes": meta_rules.uq_suffixes,
-            "allowed_pk_prefixes": meta_rules.pk_prefixes,
-            "allowed_pk_suffixes": meta_rules.pk_suffixes,
-        }
-        resolved.update({attr: values for attr, values in meta_attr_map.items() if values})
+        categories = [
+            ("index", meta_rules.index_prefixes, meta_rules.index_suffixes),
+            ("fk", meta_rules.fk_prefixes, meta_rules.fk_suffixes),
+            ("check", meta_rules.check_prefixes, meta_rules.check_suffixes),
+            ("uq", meta_rules.uq_prefixes, meta_rules.uq_suffixes),
+            ("pk", meta_rules.pk_prefixes, meta_rules.pk_suffixes),
+        ]
+        for category, prefixes, suffixes in categories:
+            if prefixes or suffixes:
+                resolved[f"allowed_{category}_prefixes"] = list(prefixes)
+                resolved[f"allowed_{category}_suffixes"] = list(suffixes)
 
         # Special handling: PostgreSQL implements UniqueConstraint as indexes,
         # so when 'uq' convention is defined, add uq prefixes/suffixes to allowed_index_* as well
