@@ -30,6 +30,8 @@ config = context.config
 
 # Support injected schema (alembic-gauntlet) or env var override
 target_schema = config.attributes.get("target_schema") or os.getenv("MIGRATION_SCHEMA", "public")
+# Alembic spells the default schema None; see "The version table in public" below
+version_table_schema = None if target_schema == "public" else target_schema
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -46,7 +48,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema=target_schema,
+        version_table_schema=version_table_schema,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -64,7 +66,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        version_table_schema=target_schema,
+        version_table_schema=version_table_schema,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -90,6 +92,27 @@ else:
     else:
         asyncio.run(run_migrations_online())
 ```
+
+## The version table in public
+
+Pass `None`, not `"public"`, when migrations run in the default schema. Autogenerate
+leaves Alembic's own `alembic_version` table out of the comparison only when the schema it
+reflects is the one named in `version_table_schema`, and it reflects the default schema as
+`None`. With `version_table_schema="public"` the table no longer matches, and
+`alembic revision --autogenerate` writes `op.drop_table('alembic_version')` into the new
+revision:
+
+```python
+# WRONG: autogenerate against public proposes dropping alembic_version
+context.configure(connection=connection, target_metadata=target_metadata,
+                  version_table_schema="public")
+
+# RIGHT: None for the default schema, the schema name for any other
+context.configure(connection=connection, target_metadata=target_metadata,
+                  version_table_schema=None if target_schema == "public" else target_schema)
+```
+
+The tests are not affected: alembic-gauntlet always injects a `test_mig_*` schema.
 
 ## Critical: SET LOCAL, not SET
 
@@ -142,7 +165,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        version_table_schema=target_schema,
+        version_table_schema=version_table_schema,
     )
     with context.begin_transaction():
         from sqlalchemy import text
@@ -184,7 +207,7 @@ Pass it to `context.configure`:
 context.configure(
     connection=connection,
     target_metadata=target_metadata,
-    version_table_schema=target_schema,
+    version_table_schema=version_table_schema,
     include_object=include_object,
     include_schemas=False,
 )

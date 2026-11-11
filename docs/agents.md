@@ -245,7 +245,9 @@ and `pk_constraint`.
    `config.attributes["connection"]` when that key is present, and must pass
    `version_table_schema=target_schema` and `SET LOCAL search_path` to
    `config.attributes["target_schema"]`. Ignore either and the tests pass while migrating
-   `public` on a connection nobody rolls back. Use `SET LOCAL`, never plain `SET` — plain
+   `public` on a connection nobody rolls back. Outside the tests, where the schema is
+   `public`, pass `version_table_schema=None`: an explicit `"public"` makes
+   `alembic revision --autogenerate` propose `op.drop_table('alembic_version')`. Use `SET LOCAL`, never plain `SET` — plain
    `SET` outlives the transaction and follows the connection back into the pool.
 4. **Migrations run inside one transaction.** The runner opens `engine.begin()` and hands
    `alembic.command` that connection, so anything that cannot run in a transaction block —
